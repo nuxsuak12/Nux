@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>Tic Tac Toe Neon</title>
+<style>
+  body{
+    margin:0;
+    font-family:sans-serif;
+    background:#0b0f1a;
+    color:#fff;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    height:100vh;
+  }
+  .app{
+    max-width:420px;width:100%;padding:16px;
+    background:#111;border-radius:16px;
+    box-shadow:0 0 20px rgba(0,0,0,0.6);
+  }
+  h2{text-align:center;margin:8px 0;color:#fff}
+  select{padding:6px;border-radius:8px;background:#222;color:#fff}
+  .board{
+    display:grid;grid-template-columns:repeat(3,1fr);
+    gap:8px;margin:16px auto;width:300px;height:300px;
+  }
+  .cell{
+    background:#1a1a1a;
+    display:flex;align-items:center;justify-content:center;
+    font-size:3em;cursor:pointer;border-radius:8px;
+    text-shadow:0 0 15px;
+    user-select:none;
+  }
+  .cell.x{
+    color:#ff4c4c;
+    text-shadow:0 0 12px #ff4c4c,0 0 20px #ff1a1a;
+  }
+  .cell.o{
+    color:#00c3ff;
+    text-shadow:0 0 12px #00c3ff,0 0 20px #00aaff;
+  }
+  .controls{text-align:center;margin-top:12px}
+  .btn{padding:6px 12px;margin:4px;border:none;border-radius:8px;cursor:pointer}
+</style>
+</head>
+<body>
+<div class="app">
+  <h2>Tic Tac Toe Neon</h2>
+
+  <div style="text-align:center;margin-bottom:8px;">
+    <label>Mode: </label>
+    <select id="mode">
+      <option value="2p">2 Player</option>
+      <option value="easy">Vs Komputer (Mudah)</option>
+      <option value="hard">Vs Komputer (Sulit)</option>
+    </select>
+  </div>
+
+  <div id="status" style="text-align:center;margin-bottom:10px;">Giliran: X</div>
+  <div class="board" id="board"></div>
+
+  <div class="controls">
+    <button class="btn" id="newGame">Mulai Baru</button>
+  </div>
+</div>
+
+<script>
+const boardEl=document.getElementById("board");
+const statusEl=document.getElementById("status");
+const newGameBtn=document.getElementById("newGame");
+const modeEl=document.getElementById("mode");
+
+let board=Array(9).fill("");
+let current="X";
+let gameOver=false;
+
+function drawBoard(){
+  boardEl.innerHTML="";
+  board.forEach((val,i)=>{
+    const cell=document.createElement("div");
+    cell.className="cell";
+    if(val==="X") cell.classList.add("x");
+    if(val==="O") cell.classList.add("o");
+    cell.textContent=val;
+    cell.dataset.index=i;
+    cell.onclick=()=>handleClick(i);
+    boardEl.appendChild(cell);
+  });
+}
+
+function handleClick(i){
+  if(gameOver||board[i]!=="")return;
+  board[i]=current;
+  checkGame();
+  current=current==="X"?"O":"X";
+  updateStatus();
+
+  if(!gameOver && (modeEl.value!=="2p") && current==="O"){
+    setTimeout(computerMove,500);
+  }
+  drawBoard();
+}
+
+function updateStatus(){
+  if(!gameOver) statusEl.textContent="Giliran: "+current;
+}
+
+function checkGame(){
+  const wins=[[0,1,2],[3,4,5],[6,7,8],
+              [0,3,6],[1,4,7],[2,5,8],
+              [0,4,8],[2,4,6]];
+  for(const [a,b,c] of wins){
+    if(board[a]&&board[a]===board[b]&&board[a]===board[c]){
+      statusEl.textContent="Pemenang: "+board[a];
+      gameOver=true;
+      return;
+    }
+  }
+  if(board.every(v=>v!=="")){
+    statusEl.textContent="Seri!";
+    gameOver=true;
+  }
+}
+
+// ===== AI =====
+function computerMove(){
+  if(modeEl.value==="easy"){
+    let kosong=board.map((v,i)=>v===""?i:null).filter(v=>v!==null);
+    let pilih=kosong[Math.floor(Math.random()*kosong.length)];
+    board[pilih]="O";
+  }else if(modeEl.value==="hard"){
+    let best=-Infinity,move;
+    board.forEach((v,i)=>{
+      if(v===""){
+        board[i]="O";
+        let score=minimax(board,0,false);
+        board[i]="";
+        if(score>best){best=score;move=i;}
+      }
+    });
+    board[move]="O";
+  }
+  checkGame();
+  current="X";
+  updateStatus();
+  drawBoard();
+}
+
+function minimax(bd,depth,isMax){
+  let res=winnerCheck(bd);
+  if(res==="O") return 10-depth;
+  if(res==="X") return depth-10;
+  if(res==="draw") return 0;
+  if(isMax){
+    let best=-Infinity;
+    bd.forEach((v,i)=>{
+      if(v===""){bd[i]="O";best=Math.max(best,minimax(bd,depth+1,false));bd[i]="";}
+    });
+    return best;
+  }else{
+    let best=Infinity;
+    bd.forEach((v,i)=>{
+      if(v===""){bd[i]="X";best=Math.min(best,minimax(bd,depth+1,true));bd[i]="";}
+    });
+    return best;
+  }
+}
+
+function winnerCheck(bd){
+  const wins=[[0,1,2],[3,4,5],[6,7,8],
+              [0,3,6],[1,4,7],[2,5,8],
+              [0,4,8],[2,4,6]];
+  for(const [a,b,c] of wins){
+    if(bd[a]&&bd[a]===bd[b]&&bd[a]===bd[c]) return bd[a];
+  }
+  if(bd.every(v=>v!=="")) return "draw";
+  return null;
+}
+
+function resetGame(){
+  board=Array(9).fill("");
+  current="X";
+  gameOver=false;
+  statusEl.textContent="Giliran: X";
+  drawBoard();
+}
+
+newGameBtn.onclick=resetGame;
+drawBoard();
+</script>
+</body>
+</html>
